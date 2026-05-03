@@ -17,9 +17,11 @@ def run_code(req: CodeRequest):
 	filename = f"{file_id}.py"
 
 	try:
+		# ghi file code
 		with open(filename, "w", encoding="utf-8") as f:
 			f.write(req.code)
 
+		# chạy code
 		result = subprocess.run(
 			["python", filename],
 			input=req.input,
@@ -28,8 +30,19 @@ def run_code(req: CodeRequest):
 			timeout=2
 		)
 
+		# ===== LẤY OUTPUT =====
 		output = result.stdout.strip()
-		score = 10 if output == req.expected_output.strip() else 0
+		expected = req.expected_output.strip()
+
+		# ===== NORMALIZE (không phân biệt hoa thường + bỏ space dư) =====
+		def normalize(s):
+			return " ".join(s.lower().split())
+
+		# ===== SO SÁNH =====
+		if normalize(output) == normalize(expected):
+			score = 10
+		else:
+			score = 0
 
 		return {
 			"output": output,
@@ -38,7 +51,18 @@ def run_code(req: CodeRequest):
 		}
 
 	except subprocess.TimeoutExpired:
-		return {"status": "TLE", "score": 0}
+		return {
+			"output": "",
+			"score": 0,
+			"status": "TLE"
+		}
+
+	except Exception as e:
+		return {
+			"output": str(e),
+			"score": 0,
+			"status": "ERROR"
+		}
 
 	finally:
 		if os.path.exists(filename):
